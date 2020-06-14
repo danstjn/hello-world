@@ -1,0 +1,37 @@
+---
+resources:
+  - name: github-repository
+    type: git
+    source: ((backend.git)) 
+
+  - name: github-resource-gist
+    type: git
+    source:
+      branch: master
+      uri: git@gist.github.com:d9e2d0140fac68ab40a4464d1ccad198.git 
+      private_key: ((backend.git))
+
+jobs:
+  - name: job-bump-date
+    serial: true
+    plan:
+      - get: github-repository
+      - get: github-resource-gist
+      - task: bump-timestamp-file
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source: {repository: starkandwayne/concourse}
+
+          inputs:
+            - name: github-repository
+            - name: github-resource-gist
+          outputs:
+            - name: updated-gist
+          run:
+            path: publishing-outputs/ci/scripts/bump-timestamp-file.sh
+
+      - put: github-resource-gist
+        params:
+          repository: updated-gist
